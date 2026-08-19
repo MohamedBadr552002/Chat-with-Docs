@@ -133,7 +133,7 @@ with main_col:
     # chat history
     chat_area = st.container()
     with chat_area:
-        for msg in st.session_state.messages:
+        for message_index, msg in enumerate(st.session_state.messages):
             if msg["role"] == "user":
                 st.markdown(f"""
                 <div style="display:flex;justify-content:flex-end;margin:0 18px 14px;gap:10px">
@@ -144,7 +144,7 @@ with main_col:
                 </div>""", unsafe_allow_html=True)
             else:
                 result = msg["content"]
-                for rec in result.get("iterations", []):
+                for record_index, rec in enumerate(result.get("iterations", [])):
                     ev = rec["evaluation"]
                     dec = ev.get("decision", "reject")
                     score = ev.get("overall_score", 0)
@@ -183,7 +183,7 @@ with main_col:
                                 angularaxis=dict(tickfont=dict(color="#9090b8",size=9),gridcolor="#252545")),
                                 paper_bgcolor="rgba(0,0,0,0)",margin=dict(l=25,r=25,t=20,b=10),height=190,showlegend=False)
                             st.plotly_chart(fig, width="stretch", config={"displayModeBar": False},
-                                            key=f"evaluation-radar-{len(st.session_state.messages)}-{it}")
+                                            key=f"evaluation-radar-{message_index}-{record_index}")
 
                     # evaluator block
                     color_ev = "#10b981" if dec == "accept" else "#f59e0b"

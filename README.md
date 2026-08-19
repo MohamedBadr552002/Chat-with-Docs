@@ -49,75 +49,97 @@ Final Answer
 
 ### 1. Prerequisites
 - Python 3.10+
-- Redis server running on `localhost:6379`
-- Google Gemini API key
+- An OpenRouter API key
+- Redis is optional, but recommended for caching
+- Docker Desktop is optional if Redis is run in a container
 
 ### 2. Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
+On Windows, use a virtual environment if possible:
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
 ### 3. Configure environment
 ```bash
 copy .env.example .env
-# Edit .env and set GOOGLE_API_KEY=your_key_here
+# Set GOOGLE_API_KEY to your OpenRouter API key.
+# Despite its historical name, the application sends this key to OpenRouter.
 ```
 
-### 4. Start Redis (Windows)
-Download from https://github.com/microsoftarchive/redis/releases
-or use Docker:
+### 4. Start Redis (optional)
+
+Run only the Redis container:
+
 ```bash
-docker run -d -p 6379:6379 redis:latest
+docker run -d --name chat-docs-redis -p 6379:6379 redis:7-alpine
 ```
-> **Note:** Redis is optional. The platform degrades gracefully without it (caching is disabled).
+
+The local app connects to `localhost:6379`. To stop and remove the container:
+
+```bash
+docker stop chat-docs-redis
+docker rm chat-docs-redis
+```
+
+> **Note:** Redis is optional. If it is unavailable, the platform continues with caching disabled.
 
 ### 5. Run the app
 ```bash
 streamlit run app.py
 ```
 
-### 6. (Optional) CLI ingestion
+Open `http://localhost:8501` in your browser. The first startup may take time while the
+Hugging Face embedding model is downloaded and loaded.
+
+### 6. Run the full stack with Docker Compose
+
+This starts both the app and Redis in containers:
+
 ```bash
-python ingest_cli.py --file document.pdf --wiki "Artificial intelligence" --url https://example.com
+docker compose -f docker/docker-compose.yml up --build
+```
+
+Open `http://localhost:8501`. Stop the stack with `Ctrl+C`, or run:
+
+```bash
+docker compose -f docker/docker-compose.yml down
 ```
 
 ### 7. Smoke test (no UI)
 ```bash
-python smoke_test.py
+python test/smoke_test.py
 ```
+
+The smoke test requires Redis if caching is desired, internet access for Wikipedia,
+and a valid OpenRouter API key. It ingests a Wikipedia page and runs the evaluator-generator
+workflow.
 
 ## Project Structure
 
 ```
 chat_with_Doc/
 ├── app.py                    # Streamlit UI
-├── config.py                 # Central configuration
-├── logger_config.py          # Loguru logging setup
-├── ingest_cli.py             # CLI ingestion helper
-├── smoke_test.py             # End-to-end smoke test
+├── architecture.md           # Architecture notes
+├── test/smoke_test.py        # End-to-end smoke test
 ├── requirements.txt
-├── .env.example
+├── docker/                   # Dockerfile and Compose configuration
+├── src/
+│   ├── agents/               # Generator and evaluator agents
+│   ├── ingestion/            # Load, chunk, embed, and store documents
+│   ├── knowledge/            # Retrieval and Redis caching
+│   ├── UI/                   # Styles and usage statistics
+│   ├── utils/                # Configuration and logging
+│   └── workflow/             # Evaluator-generator orchestration
 │
-├── ingestion/                # Knowledge ingestion pipeline
-│   ├── loaders.py            # File/URL/Wikipedia/WAV loaders
-│   ├── chunker.py            # Recursive text splitter
-│   ├── embeddings.py         # HuggingFace embedding provider
-│   ├── vectorstore.py        # ChromaDB manager
-│   └── pipeline.py           # Orchestrates load→chunk→embed→store
-│
-├── knowledge/                # External knowledge layer
-│   ├── retriever.py          # Hybrid dense+BM25 retriever
-│   └── cache.py              # Redis caching module
-│
-├── agents/                   # LLM agents
-│   ├── generator.py          # Generator LLM + isolated memory
-│   └── evaluator.py          # Evaluator LLM + isolated memory
-│
-├── workflow/                 # LCEL orchestration
-│   └── orchestrator.py       # Feedback loop (max 4 iterations)
-│
-├── chroma_db/                # ChromaDB persistence (auto-created)
-└── logs/                     # Log files (auto-created)
+├── chroma_db/                # ChromaDB persistence
+└── logs/                     # Log files
 ```
 
 ## Key Design Decisions
@@ -149,13 +171,13 @@ chain = prompt | llm | StrOutputParser()
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `GOOGLE_API_KEY` | — | **Required.** Gemini API key |
+| `GOOGLE_API_KEY` | — | **Required.** OpenRouter API key (legacy variable name) |
 | `REDIS_HOST` | `localhost` | Redis host |
 | `REDIS_PORT` | `6379` | Redis port |
 | `REDIS_TTL` | `3600` | Cache TTL in seconds |
 | `CHROMA_PERSIST_DIR` | `./chroma_db` | ChromaDB storage directory |
-| `GENERATOR_MODEL` | `gemini-1.5-flash` | Generator LLM model |
-| `EVALUATOR_MODEL` | `gemini-1.5-flash` | Evaluator LLM model |
+| `GENERATOR_MODEL` | `gemini-1.5-flash` | OpenRouter model used by the Generator |
+| `EVALUATOR_MODEL` | `gemini-1.5-flash` | OpenRouter model used by the Evaluator |
 | `EMBEDDING_MODEL` | `all-MiniLM-L6-v2` | HuggingFace embedding model |
 | `MAX_ITERATIONS` | `4` | Maximum feedback loop iterations |
 | `TOP_K_RETRIEVAL` | `5` | Number of chunks to retrieve |

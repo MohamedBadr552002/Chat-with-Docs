@@ -104,8 +104,11 @@ class EvaluatorAgent:
             model=EVALUATOR_MODEL,
             api_key=GOOGLE_API_KEY,
             temperature=0.1,
-            max_tokens=4096,
-            model_kwargs={"response_format": {"type": "json_object"}},
+            max_tokens=1024,
+            model_kwargs={
+                "response_format": {"type": "json_object"},
+                "reasoning": {"effort": "low"},
+            },
         )
 
 
