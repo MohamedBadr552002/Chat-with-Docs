@@ -1,0 +1,67 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: chat-with-docs:local
+    restart: unless-stopped
+    ports:
+      - "${STREAMLIT_PORT:-8501}:8501"
+    environment:
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: ${REDIS_DB:-0}
+      REDIS_TTL: ${REDIS_TTL:-3600}
+      CHROMA_PERSIST_DIR: /app/chroma_db
+      CHROMA_COLLECTION_NAME: ${CHROMA_COLLECTION_NAME:-knowledge_base}
+      GENERATOR_MODEL: ${GENERATOR_MODEL:-gemini-1.5-flash}
+      EVALUATOR_MODEL: ${EVALUATOR_MODEL:-gemini-1.5-flash}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-all-MiniLM-L6-v2}
+      MAX_ITERATIONS: ${MAX_ITERATIONS:-4}
+      TOP_K_RETRIEVAL: ${TOP_K_RETRIEVAL:-5}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - ../chroma_db:/app/chroma_db
+      - ../logs:/app/logs
+      - ../uploads:/app/uploads
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  smoke-test:
+    image: chat-with-docs:local
+    profiles: ["test"]
+    environment:
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CHROMA_PERSIST_DIR: /app/chroma_db
+    volumes:
+      - ../chroma_db:/app/chroma_db
+      - ../logs:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: ["python", "test/smoke_test.py"]
+
+volumes:
+  redis_data:

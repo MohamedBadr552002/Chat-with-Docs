@@ -12,7 +12,7 @@ from langchain_core.documents import Document
 from src.ingestion.loaders import load_file, load_url, load_wikipedia
 from src.ingestion.chunker import chunk_documents
 from src.ingestion.vectorstore import add_documents, collection_count
-from knowledge.cache import get_redis_client
+from src.knowledge.cache import get_redis_client
 from src.utils.config import REDIS_TTL
 from src.utils.logger_config import logger
 
