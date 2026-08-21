@@ -1,7 +1,7 @@
 """Real-time stats computed from session state and backend."""
 import time
 from src.knowledge.cache import get_redis_client
-from src.ingestion.vectorstore import get_vectorstore, collection_count
+from src.ingestion.metadata import collection_count, collection_metadata
 from src.utils.config import GENERATOR_MODEL, EVALUATOR_MODEL, REDIS_HOST, REDIS_PORT
 
 def get_redis_status():
@@ -26,8 +26,6 @@ def get_redis_stats(redis_client):
 def count_chunks_by_type():
     """Count stored chunks per file type from ChromaDB metadata."""
     try:
-        vs = get_vectorstore()
-        raw = vs._collection.get(include=["metadatas"])
         counts = {"PDF": 0, "DOCX": 0, "TXT": 0, "PPTX": 0,
                   "Web": 0, "Wikipedia": 0, "Audio": 0, "Code": 0}
         ext_map = {
@@ -37,7 +35,7 @@ def count_chunks_by_type():
             ".cpp": "Code", ".c": "Code", ".cs": "Code", ".go": "Code",
             ".html": "Code", ".css": "Code", ".sql": "Code",
         }
-        for meta in raw.get("metadatas", []):
+        for meta in collection_metadata():
             if not meta:
                 continue
             src = meta.get("source", "")

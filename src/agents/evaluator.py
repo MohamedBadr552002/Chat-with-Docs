@@ -64,8 +64,7 @@ You MUST return your evaluation as a valid JSON object with exactly this structu
 }}
 
 Acceptance threshold: overall_score >= 7.5 AND no individual dimension below 6.0.
-If the answer says 'not available in the provided sources' and the question genuinely cannot
-be answered from the context, this is CORRECT behaviour — score it highly.
+If the answer says 'The required information is not available in the provided knowledge sources.' and the question genuinely cannot be answered from the context, this is CORRECT behaviour — score it highly.
 """
 
 EVALUATOR_HUMAN_TEMPLATE = """User Question:

@@ -7,8 +7,9 @@ import plotly.graph_objects as go
 from src.UI.ui_styles import STYLES
 from src.UI.stats_tracker import (
     get_redis_status, get_redis_stats, count_chunks_by_type,
-    compute_session_stats, format_elapsed, GENERATOR_MODEL, EVALUATOR_MODEL
+  compute_session_stats, format_elapsed, GENERATOR_MODEL, EVALUATOR_MODEL,
 )
+from src.ingestion.metadata import collection_count
 from src.knowledge.cache import get_redis_client
 
 st.set_page_config(page_title="Evaluator-Generator AI", page_icon="🧠", layout="wide", initial_sidebar_state="expanded")
@@ -34,14 +35,8 @@ def _load_vectorstore():
 def get_orch():
     return _load_orchestrator()
 
-# preload vectorstore so the embedding model loads during spinner, not later
-_vs = _load_vectorstore()
-
 def _chunk_count() -> int:
-    try:
-        return _vs._collection.count()
-    except Exception:
-        return 0
+    return collection_count()
 
 # compute stats once per render
 _redis_ok     = get_redis_status()
